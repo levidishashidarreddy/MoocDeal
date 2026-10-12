@@ -1,0 +1,327 @@
+import { StudentProfile, ExamCentre, Course, StudentExam, ExamCohort, CohortMember, CourseGroupLink, LinkReport } from '../types';
+
+export const INITIAL_CENTRES: ExamCentre[] = [
+  {
+    id: 'ctr-1',
+    name: 'iON Digital Zone iDZ Patamata',
+    normalized_name: 'ion digital zone idz patamata',
+    address: 'Near Benz Circle, High School Road, Patamata',
+    city: 'Vijayawada',
+    state: 'Andhra Pradesh',
+    pincode: '520010',
+    is_verified: true,
+    created_at: '2026-09-01T10:00:00Z',
+  },
+  {
+    id: 'ctr-2',
+    name: 'iON Digital Zone iDZ Gannavaram',
+    normalized_name: 'ion digital zone idz gannavaram',
+    address: 'Opp. Airport Road, Gannavaram Mandal',
+    city: 'Vijayawada',
+    state: 'Andhra Pradesh',
+    pincode: '521101',
+    is_verified: true,
+    created_at: '2026-09-01T10:00:00Z',
+  },
+  {
+    id: 'ctr-3',
+    name: 'iON Digital Zone iDZ Perecherla',
+    normalized_name: 'ion digital zone idz perecherla',
+    address: 'Narsaraopet Road, Perecherla Village',
+    city: 'Guntur',
+    state: 'Andhra Pradesh',
+    pincode: '522009',
+    is_verified: true,
+    created_at: '2026-09-01T10:00:00Z',
+  },
+  {
+    id: 'ctr-4',
+    name: 'KL University Exam Centre',
+    normalized_name: 'kl university exam centre',
+    address: 'Green Fields, Vaddeswaram, Tadepalli Mandal',
+    city: 'Guntur',
+    state: 'Andhra Pradesh',
+    pincode: '522502',
+    is_verified: true,
+    created_at: '2026-09-01T10:00:00Z',
+  },
+  {
+    id: 'ctr-5',
+    name: 'iON Digital Zone iDZ Moula Ali',
+    normalized_name: 'ion digital zone idz moula ali',
+    address: 'Near Railway Station, Moula Ali',
+    city: 'Hyderabad',
+    state: 'Telangana',
+    pincode: '500040',
+    is_verified: true,
+    created_at: '2026-09-01T10:00:00Z',
+  },
+];
+
+export const INITIAL_COURSES: Course[] = [
+  {
+    id: 'crs-1',
+    code: 'noc24-cs101',
+    name: 'Deep Learning',
+    normalized_name: 'deep learning',
+    created_at: '2026-09-01T10:00:00Z',
+  },
+  {
+    id: 'crs-2',
+    code: 'noc24-cs102',
+    name: 'Cloud Computing',
+    normalized_name: 'cloud computing',
+    created_at: '2026-09-01T10:00:00Z',
+  },
+  {
+    id: 'crs-3',
+    code: 'noc24-cs103',
+    name: 'Problem Solving Through Programming In C',
+    normalized_name: 'problem solving through programming in c',
+    created_at: '2026-09-01T10:00:00Z',
+  },
+  {
+    id: 'crs-4',
+    code: 'noc24-cs104',
+    name: 'Database Management System',
+    normalized_name: 'database management system',
+    created_at: '2026-09-01T10:00:00Z',
+  },
+  {
+    id: 'crs-5',
+    code: 'noc24-cs105',
+    name: 'Design and Analysis of Algorithms',
+    normalized_name: 'design and analysis of algorithms',
+    created_at: '2026-09-01T10:00:00Z',
+  },
+  {
+    id: 'crs-6',
+    code: 'noc24-ee101',
+    name: 'Digital Circuits',
+    normalized_name: 'digital circuits',
+    created_at: '2026-09-01T10:00:00Z',
+  },
+  {
+    id: 'crs-7',
+    code: 'noc24-mg101',
+    name: 'Principles of Management',
+    normalized_name: 'principles of management',
+    created_at: '2026-09-01T10:00:00Z',
+  },
+];
+
+export const INITIAL_STUDENTS: StudentProfile[] = [
+  {
+    id: 'std-admin',
+    reg_no: 'AP21110010001',
+    full_name: 'Karthik Varma',
+    branch: 'CSE',
+    academic_year: '4th Year',
+    section: 'CSE-A',
+    phone_visible: true,
+    is_admin: true,
+    created_at: '2026-09-01T10:00:00Z',
+  },
+  {
+    id: 'std-2',
+    reg_no: 'AP21110010145',
+    full_name: 'Ananya Reddy',
+    branch: 'CSE',
+    academic_year: '3rd Year',
+    section: 'CSE-B',
+    phone_visible: false,
+    is_admin: false,
+    created_at: '2026-09-02T10:00:00Z',
+  },
+  {
+    id: 'std-3',
+    reg_no: 'AP21110010210',
+    full_name: 'Sai Teja P.',
+    branch: 'ECE',
+    academic_year: '3rd Year',
+    section: 'ECE-A',
+    phone_visible: true,
+    is_admin: false,
+    created_at: '2026-09-03T10:00:00Z',
+  },
+  {
+    id: 'std-4',
+    reg_no: 'AP21110010330',
+    full_name: 'Meghana Rao',
+    branch: 'AI_ML',
+    academic_year: '2nd Year',
+    section: 'AIML-1',
+    phone_visible: false,
+    is_admin: false,
+    created_at: '2026-09-04T10:00:00Z',
+  },
+  {
+    id: 'std-5',
+    reg_no: 'AP21110010412',
+    full_name: 'Rohit Chowdary',
+    branch: 'CSE',
+    academic_year: '3rd Year',
+    section: 'CSE-C',
+    phone_visible: true,
+    is_admin: false,
+    created_at: '2026-09-05T10:00:00Z',
+  },
+  {
+    id: 'std-6',
+    reg_no: 'AP21110010508',
+    full_name: 'Pooja K.',
+    branch: 'DATA_SCIENCE',
+    academic_year: '3rd Year',
+    section: 'DS-A',
+    phone_visible: false,
+    is_admin: false,
+    created_at: '2026-09-06T10:00:00Z',
+  },
+];
+
+export const INITIAL_COHORTS: ExamCohort[] = [
+  {
+    id: 'coh-1',
+    centre_id: 'ctr-1', // Patamata
+    exam_date: '2026-10-25',
+    reporting_time: '07:30',
+    whatsapp_group_link: 'https://chat.whatsapp.com/GHYu78KlmNP12345678',
+    link_submitted_by: 'std-admin',
+    link_updated_at: '2026-10-10T12:00:00Z',
+    created_at: '2026-10-01T10:00:00Z',
+  },
+  {
+    id: 'coh-2',
+    centre_id: 'ctr-1', // Patamata
+    exam_date: '2026-10-25',
+    reporting_time: '12:30',
+    whatsapp_group_link: 'https://chat.whatsapp.com/JKL987MnoPQ87654321',
+    link_submitted_by: 'std-2',
+    link_updated_at: '2026-10-11T09:30:00Z',
+    created_at: '2026-10-01T10:00:00Z',
+  },
+  {
+    id: 'coh-3',
+    centre_id: 'ctr-2', // Gannavaram
+    exam_date: '2026-10-25',
+    reporting_time: '07:30',
+    whatsapp_group_link: null,
+    link_submitted_by: null,
+    link_updated_at: null,
+    created_at: '2026-10-02T10:00:00Z',
+  },
+  {
+    id: 'coh-4',
+    centre_id: 'ctr-3', // Perecherla Guntur
+    exam_date: '2026-10-26',
+    reporting_time: '07:30',
+    whatsapp_group_link: 'https://chat.whatsapp.com/GNT456GunTurSRM9999',
+    link_submitted_by: 'std-3',
+    link_updated_at: '2026-10-11T14:00:00Z',
+    created_at: '2026-10-03T10:00:00Z',
+  },
+];
+
+export const INITIAL_STUDENT_EXAMS: StudentExam[] = [
+  {
+    id: 'ex-1',
+    student_id: 'std-admin',
+    course_id: 'crs-1', // Deep Learning
+    centre_id: 'ctr-1',
+    exam_date: '2026-10-25',
+    reporting_time: '07:30',
+    exam_start_time: '09:00',
+    shift: 'FN',
+    status: 'CONFIRMED',
+    created_at: '2026-10-01T10:00:00Z',
+  },
+  {
+    id: 'ex-2',
+    student_id: 'std-2',
+    course_id: 'crs-1', // Deep Learning
+    centre_id: 'ctr-1',
+    exam_date: '2026-10-25',
+    reporting_time: '07:30',
+    exam_start_time: '09:00',
+    shift: 'FN',
+    status: 'CONFIRMED',
+    created_at: '2026-10-02T10:00:00Z',
+  },
+  {
+    id: 'ex-3',
+    student_id: 'std-3',
+    course_id: 'crs-2', // Cloud Computing (different course, SAME CENTRE & TIME!)
+    centre_id: 'ctr-1',
+    exam_date: '2026-10-25',
+    reporting_time: '07:30',
+    exam_start_time: '09:00',
+    shift: 'FN',
+    status: 'CONFIRMED',
+    created_at: '2026-10-03T10:00:00Z',
+  },
+  {
+    id: 'ex-4',
+    student_id: 'std-4',
+    course_id: 'crs-1', // Deep Learning (same course, different time!)
+    centre_id: 'ctr-1',
+    exam_date: '2026-10-25',
+    reporting_time: '12:30',
+    exam_start_time: '14:00',
+    shift: 'AN',
+    status: 'CONFIRMED',
+    created_at: '2026-10-04T10:00:00Z',
+  },
+  {
+    id: 'ex-5',
+    student_id: 'std-5',
+    course_id: 'crs-1', // Deep Learning (same course, Gannavaram centre!)
+    centre_id: 'ctr-2',
+    exam_date: '2026-10-25',
+    reporting_time: '07:30',
+    exam_start_time: '09:00',
+    shift: 'FN',
+    status: 'CONFIRMED',
+    created_at: '2026-10-05T10:00:00Z',
+  },
+  {
+    id: 'ex-6',
+    student_id: 'std-6',
+    course_id: 'crs-1', // Deep Learning (Hall ticket not received yet!)
+    centre_id: null,
+    exam_date: null,
+    reporting_time: null,
+    exam_start_time: null,
+    shift: null,
+    status: 'PENDING_DETAILS',
+    created_at: '2026-10-06T10:00:00Z',
+  },
+];
+
+export const INITIAL_COHORT_MEMBERS: CohortMember[] = [
+  { id: 'cm-1', cohort_id: 'coh-1', student_id: 'std-admin', exam_id: 'ex-1', joined_at: '2026-10-01T10:00:00Z' },
+  { id: 'cm-2', cohort_id: 'coh-1', student_id: 'std-2', exam_id: 'ex-2', joined_at: '2026-10-02T10:00:00Z' },
+  { id: 'cm-3', cohort_id: 'coh-1', student_id: 'std-3', exam_id: 'ex-3', joined_at: '2026-10-03T10:00:00Z' },
+  { id: 'cm-4', cohort_id: 'coh-2', student_id: 'std-4', exam_id: 'ex-4', joined_at: '2026-10-04T10:00:00Z' },
+  { id: 'cm-5', cohort_id: 'coh-3', student_id: 'std-5', exam_id: 'ex-5', joined_at: '2026-10-05T10:00:00Z' },
+];
+
+export const INITIAL_COURSE_LINKS: CourseGroupLink[] = [
+  {
+    id: 'cgl-1',
+    course_id: 'crs-1',
+    whatsapp_group_link: 'https://chat.whatsapp.com/DL101SRMAPNptelStudy24',
+    submitted_by: 'std-admin',
+    is_active: true,
+    created_at: '2026-09-15T10:00:00Z',
+  },
+  {
+    id: 'cgl-2',
+    course_id: 'crs-2',
+    whatsapp_group_link: 'https://chat.whatsapp.com/CloudSRMAPNptelGroup24',
+    submitted_by: 'std-3',
+    is_active: true,
+    created_at: '2026-09-18T10:00:00Z',
+  },
+];
+
+export const INITIAL_REPORTS: LinkReport[] = [];
