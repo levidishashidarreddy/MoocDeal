@@ -58,6 +58,8 @@ export const INITIAL_CENTRES: ExamCentre[] = [
   },
 ];
 
+import { OFFICIAL_SRMAP_COURSES } from '../data/officialCourses';
+
 export const INITIAL_COURSES: Course[] = [
   {
     id: 'crs-1',
@@ -108,6 +110,7 @@ export const INITIAL_COURSES: Course[] = [
     normalized_name: 'principles of management',
     created_at: '2026-09-01T10:00:00Z',
   },
+  ...OFFICIAL_SRMAP_COURSES,
 ];
 
 export const INITIAL_STUDENTS: StudentProfile[] = [

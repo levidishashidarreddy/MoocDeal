@@ -7,6 +7,22 @@ export default {
   theme: {
     extend: {
       colors: {
+        dark: {
+          950: '#07070B',
+          900: '#0A0B10',
+          850: '#0F1017',
+          800: '#13141D',
+          700: '#1A1C29',
+        },
+        brand: {
+          violet: '#7C3AED',
+          purple: '#8B5CF6',
+          accent: '#A78BFA',
+        },
+        subtle: {
+          border: '#1E202D',
+          text: '#94A3B8',
+        },
         navy: {
           950: '#07101C',
           900: '#0B192C',

@@ -57,71 +57,71 @@ export const ReportLinkModal: React.FC<ReportLinkModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-950/70 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-sm animate-fade-in">
+      <div className="bg-dark-800 border border-subtle-border rounded-2xl max-w-md w-full max-h-[90dvh] overflow-y-auto shadow-card">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-rose-50/50">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-subtle-border">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center">
-              <AlertCircle className="w-5 h-5" />
+            <div className="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center justify-center shrink-0">
+              <AlertCircle className="w-4 h-4" />
             </div>
-            <div>
-              <h2 className="text-lg font-bold text-navy-900">Report WhatsApp Group Link</h2>
-              <p className="text-xs text-slate-500">For: {targetTitle}</p>
+            <div className="min-w-0">
+              <h2 className="text-xs sm:text-sm font-bold text-white truncate">Report WhatsApp Group Link</h2>
+              <p className="text-[10px] sm:text-[11px] text-subtle-text truncate max-w-[200px]">{targetTitle}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
+            className="p-1.5 rounded-lg text-subtle-text hover:text-white hover:bg-white/5 transition-colors shrink-0"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {success ? (
-          <div className="p-8 text-center space-y-3">
-            <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto" />
-            <h3 className="text-lg font-bold text-navy-900">Report Received</h3>
-            <p className="text-sm text-slate-600">
+          <div className="p-8 text-center space-y-2">
+            <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto" />
+            <h3 className="text-sm font-bold text-white">Report Submitted</h3>
+            <p className="text-xs text-subtle-text">
               Thank you for keeping our student community safe. An administrator will review this link.
             </p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
             {error && (
-              <div className="p-3 text-xs bg-rose-50 text-rose-700 border border-rose-200 rounded-xl">
+              <div className="p-2.5 text-xs bg-rose-500/10 text-rose-300 border border-rose-500/20 rounded-xl">
                 {error}
               </div>
             )}
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-[11px] font-medium text-slate-300 mb-1">
                 Link Under Review
               </label>
-              <div className="text-xs font-mono text-slate-500 bg-slate-100 p-2.5 rounded-lg break-all select-all">
+              <div className="text-[11px] font-mono text-slate-400 bg-dark-850 p-2.5 rounded-xl border border-subtle-border break-all">
                 {whatsappLink}
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Why are you reporting this link?
+              <label className="block text-[11px] font-medium text-slate-300 mb-1.5">
+                Reason
               </label>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 {[
-                  { id: 'EXPIRED', label: 'Revoked / Expired Link' },
-                  { id: 'SPAM', label: 'Spam or Promotional' },
-                  { id: 'WRONG_GROUP', label: 'Wrong Exam or Subject' },
-                  { id: 'INAPPROPRIATE', label: 'Inappropriate Content' },
+                  { id: 'EXPIRED', label: 'Revoked / Expired' },
+                  { id: 'SPAM', label: 'Spam / Promo' },
+                  { id: 'WRONG_GROUP', label: 'Wrong Subject' },
+                  { id: 'INAPPROPRIATE', label: 'Inappropriate' },
                 ].map(opt => (
                   <button
                     key={opt.id}
                     type="button"
                     onClick={() => setReason(opt.id as any)}
-                    className={`p-2.5 rounded-xl border text-left font-medium transition-all ${
+                    className={`p-2.5 rounded-xl border text-left font-medium transition-all text-xs ${
                       reason === opt.id
-                        ? 'border-rose-500 bg-rose-50/50 text-rose-900 ring-2 ring-rose-200'
-                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                        ? 'border-rose-500/60 bg-rose-500/10 text-rose-300'
+                        : 'border-subtle-border bg-dark-850 text-subtle-text hover:text-white'
                     }`}
                   >
                     {opt.label}
@@ -131,30 +131,30 @@ export const ReportLinkModal: React.FC<ReportLinkModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Additional Details (Optional)
+              <label className="block text-[11px] font-medium text-slate-300 mb-1">
+                Optional Details
               </label>
               <textarea
                 value={details}
                 onChange={e => setDetails(e.target.value)}
-                placeholder="Explain the issue briefly (e.g., link says group is full or invalid)"
-                rows={3}
-                className="w-full text-xs p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-navy-700"
+                placeholder="Explain the issue briefly (e.g. group is full or invalid)"
+                rows={2}
+                className="w-full text-xs p-2.5 rounded-xl bg-dark-850 border border-subtle-border text-white placeholder-slate-500 focus:outline-none focus:border-brand-violet"
               />
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-2">
+            <div className="flex items-center justify-end gap-2 pt-2">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+                className="px-3.5 py-1.5 text-xs text-subtle-text hover:text-white"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={submitting}
-                className="px-5 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-50 rounded-xl transition-colors shadow-sm"
+                className="px-4 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-500 disabled:opacity-50 rounded-xl transition-colors shadow-glow"
               >
                 {submitting ? 'Submitting...' : 'Submit Report'}
               </button>

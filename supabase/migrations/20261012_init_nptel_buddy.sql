@@ -1,5 +1,5 @@
 -- ====================================================================
--- NPTEL EXAM BUDDY — SRM AP
+-- MoocDeal — SRM DEALINGS
 -- Initial Database Migration
 -- PostgreSQL / Supabase Schema with Row Level Security & Atomic Functions
 -- ====================================================================
@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 );
 
 -- Unique constraint on normalized registration number
-CREATE UNIQUE INDEX IF NOT EXISTS idx_profiles_reg_no_unique 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_profiles_reg_no_unique
     ON public.profiles (UPPER(TRIM(reg_no)));
 
 -- 2. CENTRES TABLE
@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS public.centres (
 );
 
 -- Index for dynamic centre lookups and duplicate prevention
-CREATE INDEX IF NOT EXISTS idx_centres_normalized_city 
+CREATE INDEX IF NOT EXISTS idx_centres_normalized_city
     ON public.centres (normalized_name, city);
 
 -- 3. COURSES TABLE (NPTEL Course Catalogue)
@@ -53,9 +53,9 @@ CREATE TABLE IF NOT EXISTS public.courses (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_courses_code_unique 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_courses_code_unique
     ON public.courses (UPPER(TRIM(code)));
-CREATE INDEX IF NOT EXISTS idx_courses_normalized_name 
+CREATE INDEX IF NOT EXISTS idx_courses_normalized_name
     ON public.courses (normalized_name);
 
 -- 4. STUDENT_EXAMS TABLE
@@ -71,13 +71,13 @@ CREATE TABLE IF NOT EXISTS public.student_exams (
     status VARCHAR(20) NOT NULL DEFAULT 'PENDING_DETAILS' CHECK (status IN ('CONFIRMED', 'PENDING_DETAILS')),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
-    CONSTRAINT unique_student_course UNIQUE (student_id, course_id)
+    CONSTRAINT unique_student_exam UNIQUE (student_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_student_exams_matching 
-    ON public.student_exams (centre_id, exam_date, reporting_time) 
+CREATE INDEX IF NOT EXISTS idx_student_exams_matching
+    ON public.student_exams (centre_id, exam_date, reporting_time)
     WHERE status = 'CONFIRMED';
-CREATE INDEX IF NOT EXISTS idx_student_exams_course 
+CREATE INDEX IF NOT EXISTS idx_student_exams_course
     ON public.student_exams (course_id);
 
 -- 5. EXAM_COHORTS TABLE
@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS public.exam_cohorts (
     CONSTRAINT unique_centre_date_reporting_time UNIQUE (centre_id, exam_date, reporting_time)
 );
 
-CREATE INDEX IF NOT EXISTS idx_cohorts_lookup 
+CREATE INDEX IF NOT EXISTS idx_cohorts_lookup
     ON public.exam_cohorts (centre_id, exam_date, reporting_time);
 
 -- 6. COHORT_MEMBERS TABLE
@@ -109,9 +109,9 @@ CREATE TABLE IF NOT EXISTS public.cohort_members (
     CONSTRAINT unique_cohort_student UNIQUE (cohort_id, student_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_cohort_members_cohort 
+CREATE INDEX IF NOT EXISTS idx_cohort_members_cohort
     ON public.cohort_members (cohort_id);
-CREATE INDEX IF NOT EXISTS idx_cohort_members_student 
+CREATE INDEX IF NOT EXISTS idx_cohort_members_student
     ON public.cohort_members (student_id);
 
 -- 7. COURSE_GROUP_LINKS TABLE
@@ -126,7 +126,7 @@ CREATE TABLE IF NOT EXISTS public.course_group_links (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_course_group_links_course 
+CREATE INDEX IF NOT EXISTS idx_course_group_links_course
     ON public.course_group_links (course_id, is_active);
 
 -- 8. LINK_REPORTS TABLE

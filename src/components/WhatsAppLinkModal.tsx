@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Share2, X, MessageSquare, AlertCircle, ExternalLink } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Share2, X, MessageSquare, AlertCircle, ExternalLink, ShieldCheck } from 'lucide-react';
 import { isValidWhatsAppLink } from '../services/dataService';
 
 interface WhatsAppLinkModalProps {
@@ -23,14 +23,21 @@ export const WhatsAppLinkModal: React.FC<WhatsAppLinkModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (isOpen) {
+      setLink(currentLink || '');
+      setError(null);
+    }
+  }, [isOpen, currentLink]);
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanLink = link.trim();
+    const cleanLink = link.trim().replace(/\/+$/, '');
 
     if (!isValidWhatsAppLink(cleanLink)) {
-      setError('Please provide a valid WhatsApp group invite link starting with https://chat.whatsapp.com/');
+      setError('Please provide a valid WhatsApp group invite link starting with https://chat.whatsapp.com/[code]');
       return;
     }
 
@@ -47,45 +54,48 @@ export const WhatsAppLinkModal: React.FC<WhatsAppLinkModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-950/70 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-sm animate-fade-in">
+      <div className="bg-dark-800 border border-subtle-border rounded-2xl max-w-md w-full max-h-[90dvh] overflow-y-auto shadow-card">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-emerald-50/50">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-subtle-border">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-sm">
-              <MessageSquare className="w-5 h-5" />
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center shrink-0">
+              <MessageSquare className="w-4 h-4" />
             </div>
-            <div>
-              <h2 className="text-lg font-bold text-navy-900">{title}</h2>
-              <p className="text-xs text-slate-500">{subtitle}</p>
+            <div className="min-w-0">
+              <h2 className="text-xs sm:text-sm font-bold text-white truncate">
+                {currentLink ? 'Edit / Replace WhatsApp Group' : title}
+              </h2>
+              <p className="text-[10px] sm:text-[11px] text-subtle-text truncate">{subtitle}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
+            className="p-1.5 rounded-lg text-subtle-text hover:text-white hover:bg-white/5 transition-colors shrink-0"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 leading-relaxed">
-            <p className="font-semibold text-navy-900 flex items-center gap-1.5 mb-1">
-              <Share2 className="w-3.5 h-3.5 text-emerald-600" />
-              Community-Created Groups
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
+          <div className="p-3 rounded-xl bg-white/5 border border-white/5 text-[11px] text-subtle-text leading-relaxed space-y-1">
+            <p>
+              Create your group manually in the WhatsApp app, copy its invite link, and paste it below. MoocDeal does not create groups automatically.
             </p>
-            Create your WhatsApp group in the WhatsApp app, generate the invite link (via Group Info &gt; Invite via link), and paste it below. Fellow eligible students in this cohort can join directly.
+            <p className="text-[10px] text-slate-400">
+              Only verified SRM AP students in this slot or course will see this link. As the author, you can edit or replace it at any time.
+            </p>
           </div>
 
           {error && (
-            <div className="p-3 text-xs bg-rose-50 text-rose-700 border border-rose-200 rounded-xl flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0" />
+            <div className="p-2.5 text-xs bg-rose-500/10 text-rose-300 border border-rose-500/20 rounded-xl flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
               <span>{error}</span>
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+            <label className="block text-xs font-medium text-slate-300 mb-1.5">
               WhatsApp Group Invite Link
             </label>
             <div className="relative">
@@ -96,33 +106,34 @@ export const WhatsAppLinkModal: React.FC<WhatsAppLinkModalProps> = ({
                   setLink(e.target.value);
                   if (error) setError(null);
                 }}
-                placeholder="https://chat.whatsapp.com/GHYu78KlmNP..."
-                className="w-full text-xs font-mono p-3 pr-8 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                placeholder="https://chat.whatsapp.com/..."
+                className="w-full text-xs font-mono p-3 pr-8 rounded-xl bg-dark-850 border border-subtle-border text-white placeholder-slate-500 focus:outline-none focus:border-brand-violet"
                 required
               />
-              <ExternalLink className="w-4 h-4 text-slate-400 absolute right-3 top-3 pointer-events-none" />
+              <ExternalLink className="w-3.5 h-3.5 text-subtle-text absolute right-3 top-3 pointer-events-none" />
             </div>
-            <p className="text-[11px] text-slate-500 mt-1">
-              Must begin with <span className="font-mono text-emerald-700">https://chat.whatsapp.com/</span>
+            <p className="text-[10px] text-subtle-text mt-1">
+              Must start with <span className="font-mono text-emerald-400">https://chat.whatsapp.com/</span>
             </p>
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-2">
+          <div className="flex items-center justify-end gap-2.5 pt-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+              className="px-4 py-2.5 text-xs text-subtle-text hover:text-white min-h-[42px]"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 rounded-xl transition-colors shadow-sm flex items-center gap-1.5"
+              className="px-5 py-2.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 rounded-xl transition-colors shadow-glow flex items-center justify-center gap-1.5 min-h-[44px]"
             >
-              {loading ? 'Saving...' : currentLink ? 'Update Group Link' : 'Share Group Link'}
+              {loading ? 'Saving...' : currentLink ? 'Update Link' : 'Share Group Link'}
             </button>
           </div>
+
         </form>
       </div>
     </div>

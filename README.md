@@ -1,66 +1,67 @@
-# NPTEL Exam Buddy — SRM AP
+# MoocDeal — SRM DEALINGS
 
-A complete, production-ready, responsive student cohort & study buddy discovery platform built for students associated with the unofficial **SRM DEALINGS** student community at **SRM University–AP**.
+A minimal, student buddy-discovery web application built for students associated with the unofficial **SRM DEALINGS** student community at **SRM University–AP**.
 
----
-
-## 1. Core Purpose & Architectural Scope
-
-This platform is a **student buddy-discovery platform** designed specifically for NPTEL examination logistics and MOOC coursework:
-- **Same Exam Centre & Reporting Time**: Matches students taking an NPTEL exam at the *same test centre*, on the *same date*, and with the *same official reporting time* (even across different courses) for travel coordination, auto-sharing from Vijayawada or Guntur, and morning arrival.
-- **Same MOOC Course**: Matches students studying the same NPTEL online course across all dates and centres for assignment doubts, peer discussions, and coursework study materials.
-- **Independent WhatsApp Group Coordination**: Students create their own WhatsApp groups in the WhatsApp application and paste their invite links into the matching cohort or course page.
-- **Zero-Storage AI Vision Parsing**: Hall tickets are analyzed in server memory using vision models to extract logistics fields and are immediately discarded.
+Designed with the **MasterOS** sleek dark aesthetic (deep midnight black, elevated cards, purple/violet accents, generous whitespace, and restrained typography).
 
 ---
 
-## 2. Technology Stack
+## 1. Product Identity & Purpose
 
-- **Frontend**: React 18 / 19, TypeScript, Vite
-- **Styling**: Tailwind CSS with custom university design system (`#0B192C` Deep Navy, White, Slate, and Emerald accents)
-- **Backend & Database**: Supabase PostgreSQL (Full SQL migrations, RLS policies, indexes, and atomic trigger functions)
-- **Authentication**: Unique SRMAP Registration Number (`AP21110010xxx`) with hashed credentials and session persistence
-- **Serverless API**: `/api/extract-hallticket` (Vercel Serverless Function and Vite dev server middleware)
-- **AI Vision**: Vision model extraction with strict JSON schema validation and zero-storage data policy
-- **Deployment**: Vercel & GitHub with Supabase as managed backend
+**MoocDeal** is a simple, focused buddy-discovery platform—not a college management system or transport booking app:
+- **Same Exam Centre & Time**: Connect with SRM AP peers attending an NPTEL exam at the *same test venue*, on the *same date*, and at the *exact same official reporting time* for auto-sharing, group travel from Vijayawada or Guntur, and morning coordination.
+- **Same MOOC Course**: Discover peers enrolled in the same online course across sections and centres for assignment discussions, doubt clearing, and study resources.
+- **Independent WhatsApp Groups**: Students create their own WhatsApp groups and paste invite links into the matching cohort or course view.
+- **Privacy First**: Zero image retention for uploaded hall tickets; in-memory OCR parsing only; masked student registration numbers (`AP21110*****5`).
 
 ---
 
-## 3. Database Schema & Migrations
+## 2. MasterOS Design System
 
-The database migration is located at:
-[`supabase/migrations/20261012_init_nptel_buddy.sql`](file:///d:/Programming/DealingsMooc/supabase/migrations/20261012_init_nptel_buddy.sql)
-
-### Tables Included:
-1. `profiles`: Primary student profiles with unique normalized SRMAP registration number, branch, academic year, section, and admin flag.
-2. `centres`: Dynamic examination centres with `normalized_name`, address, city, state, pincode, and `is_verified` boolean.
-3. `courses`: Canonical NPTEL course catalogue (e.g. Deep Learning, Cloud Computing, C Programming).
-4. `student_exams`: Student enrolled exams with status (`CONFIRMED` or `PENDING_DETAILS`), reporting time, start time, shift (`FN`/`AN`).
-5. `exam_cohorts`: Unique cohorts constrained by `UNIQUE(centre_id, exam_date, reporting_time)`.
-6. `cohort_members`: Junction table linking students to cohorts (`UNIQUE(cohort_id, student_id)`).
-7. `course_group_links`: Study group WhatsApp invite links for course-level matching.
-8. `link_reports`: Community reporting queue for expired, spam, or inappropriate WhatsApp links.
-
-### Atomic Functions & Triggers:
-- `handle_student_exam_sync()`: PostgreSQL trigger on `student_exams` that automatically creates or retrieves the matching `exam_cohort` and assigns `cohort_members` atomically on insert/update, preventing race conditions.
-- **Row Level Security (RLS)**: Strict policies ensuring students can only modify their own profile and exam records, while enabling cohort discovery and restricting admin actions to authorized administrators.
+- **Background Palette**: Deep midnight `#0A0B10` (`bg-dark-900`) and dark canvas `#0F1017`.
+- **Card Styling**: Elevated dark `#13141D` (`bg-dark-800`) with subtle border `#1E202D` (`border-subtle-border`).
+- **Brand Accents**: Vibrant purple/violet `#7C3AED` (`brand-violet`) and `#8B5CF6` (`brand-purple`) with subtle glow effects.
+- **Typography**: Clean Inter typography with small uppercase section tracking labels (`MY EXAM`, `MATCHING STUDENTS`).
+- **Minimal Navigation**: MoocDeal logo, dual-state switcher (`My Exam` / `Find Buddies`), student profile avatar pill, and logout.
 
 ---
 
-## 4. Environment Variables
+## 3. Core Architecture Rules
 
-Create a `.env` file in the project root:
+### Strictly One Exam Per Student
+- Each student has exactly **one** NPTEL exam record in the application.
+- Enforced at both the database level via PostgreSQL constraint:
+  ```sql
+  CONSTRAINT unique_student_exam UNIQUE (student_id)
+  ```
+  and the application layer via atomic upsert operations (`onConflict: 'student_id'`).
+- The dashboard displays one compact **My Exam** card with an unobtrusive **Edit Exam** modal option.
 
-```env
-# Supabase Configuration
-VITE_SUPABASE_URL=https://your-project-id.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key-here
+### Minimal First-Login Onboarding
+On initial login, students configure their MOOC exam with two clear choices:
+1. **Upload Hall Ticket**: In-memory AI vision extraction autofills course, centre, exam date, reporting time, start time, and shift. The screenshot is discarded immediately after processing.
+2. **I Don't Have My Hall Ticket Yet**: Requires only the MOOC course name/code. The slot is marked as `PENDING_DETAILS` without forcing centre, date, or reporting time.
 
-# Google Gemini Vision API (for Hall Ticket OCR parsing)
-GEMINI_API_KEY=AIzaSy...
-```
+### Minimal Dashboard
+- Welcome greeting with display name: `Welcome, Name 👋`
+- Single **My Exam** card (course code/name, centre venue, date, reporting time, start time, confirmed status).
+- Unobtrusive **Upload Hall Ticket** button if the exam record is pending hall ticket details.
+- Primary CTA: **Find Buddies**.
 
-*Note: If environment variables are omitted or empty, the application automatically runs in **University Sandbox Mode** with pre-populated realistic SRM AP student data (Karthik Varma, Ananya Reddy, Sai Teja P., etc.), centres in Vijayawada & Guntur, and mock AI vision extraction so all features can be demonstrated immediately without setup friction.*
+### Find Buddies Discovery
+Two clean tabs:
+1. **Same Exam Centre & Time**: Matches students attending the same verified centre, date, and reporting time (regardless of course). Displays cohort WhatsApp group link (join/update/report) and masked student roster.
+2. **Same MOOC Course**: Matches all students enrolled in the same course (regardless of venue). Displays course discussion group link and peer roster.
+
+---
+
+## 4. Technology Stack
+
+- **Frontend**: React 19, TypeScript, Vite 8
+- **Styling**: Tailwind CSS with custom MasterOS design tokens
+- **Backend & Database**: Supabase PostgreSQL with Row Level Security (RLS)
+- **AI Admit Card OCR**: In-memory vision processing (`/api/extract-hallticket.ts`)
+- **Testing**: Vitest unit and integration test suite
 
 ---
 
@@ -73,84 +74,50 @@ npm install
 # 2. Start local development server
 npm run dev
 
-# 3. Build production bundle
+# 3. Run test suite
+npm test
+
+# 4. Build production bundle
 npm run build
 ```
 
-Open [http://localhost:5173](http://localhost:5173) in your browser.
+The application runs on `http://localhost:5173/`.
+
+### Environment Variables (.env)
+
+```env
+# Supabase Configuration
+VITE_SUPABASE_URL=https://your-project-id.supabase.co
+VITE_SUPABASE_ANON_KEY=your-supabase-anon-key-here
+
+# Google Gemini API Configuration (Server-Side Only)
+GEMINI_API_KEY=your-gemini-api-key-here
+GEMINI_MODEL=gemini-2.5-flash
+```
+
+*Note: In local development without Supabase keys, the application smoothly runs with local storage state management and realistic SRM AP student data.*
 
 ---
 
-## 6. Key Features Implemented
+## 6. Database Migrations
 
-### A. First-Login Onboarding
-- **Option A (Upload Hall Ticket)**:
-  - File drag-and-drop supporting JPEG, PNG, WebP (< 5MB).
-  - Sends image to `/api/extract-hallticket` for in-memory OCR.
-  - Returns structured logistics: MOOC course name, course code, exam date, reporting time (07:30) distinct from exam start time (09:00), FN/AN shift, test centre name, address, city, pincode.
-  - Automatically loads an editable review form for student confirmation.
-  - Discards temporary image memory immediately after parsing.
-- **Option B (I Don't Have My Hall Ticket)**:
-  - Asks only for the MOOC course title/code.
-  - Does NOT require test centre, date, or reporting time.
-  - Saves exam as `PENDING_DETAILS` so students can immediately find course study buddies.
-
-### B. Same Centre & Reporting Time Discovery
-- Grouped by `(Centre, Exam Date, Official Reporting Time)`.
-- Matches students taking different courses at the same venue and hour.
-- Cohort cards with venue address, city, and active buddies count.
-- Community WhatsApp group button (`chat.whatsapp.com/...`), link updater, and link report modal.
-- Student table displaying Name, masked/full Registration Number, Course, Branch, Year, and Section.
-
-### C. Same MOOC Course Discovery
-- Search and filter across courses (Deep Learning, Cloud Computing, etc.).
-- Independent of test centre and date.
-- Peer study WhatsApp group integration with URL validation and moderation.
-
-### D. Dynamic Centre Resolution & Administration
-- Suggests new centres automatically when extracted from hall tickets (`is_verified = false`).
-- Dedicated Admin Portal for authorized accounts (`user.is_admin`):
-  - Review & approve pending centre suggestions.
-  - Merge duplicate centres into canonical verified venues.
-  - Review and resolve flagged WhatsApp links (dismiss or remove).
-  - View real-time platform metrics.
-
-### E. Privacy & Security Protections
-- Registration number masking toggle: students can mask their registration number (`AP21110*****5`) from general cohort listings.
-- Zero image retention policy with dedicated Privacy Notice modal.
-- Client-side and server-side WhatsApp URL validation (`^https://chat\.whatsapp\.com/[A-Za-z0-9_-]{20,}$`).
-- No candidate photographs, DOB, signatures, or personal phone numbers are ever stored.
+Database migrations are located in `supabase/migrations/`:
+- [`20261013_consolidated_production_migration.sql`](supabase/migrations/20261013_consolidated_production_migration.sql): Consolidated production deployment migration (schema, RLS policies, official 91-course SRM AP MOOC catalogue seed, and server-side brute-force lockout RPC `authenticate_student`).
+- Individual versioned migrations (`20261012_*` to `20261013_*`) are preserved for sequential history and rollback references.
 
 ---
 
-## 7. Deployment Instructions (Vercel & Supabase)
+## 7. Verification & Testing
 
-### Supabase Setup:
-1. Create a new Supabase project at [supabase.com](https://supabase.com).
-2. Go to the **SQL Editor** in Supabase Dashboard.
-3. Paste and run the entire script from [`supabase/migrations/20261012_init_nptel_buddy.sql`](file:///d:/Programming/DealingsMooc/supabase/migrations/20261012_init_nptel_buddy.sql).
-4. Retrieve your Project URL and anon public key from **Project Settings > API**.
+Run the automated test suite:
+```bash
+npm test
+```
 
-### Vercel Deployment:
-1. Push your repository to GitHub.
-2. In Vercel, click **Add New Project** and import the repository.
-3. In **Environment Variables**, add:
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
-   - `GEMINI_API_KEY`
-4. Click **Deploy**. Vercel will automatically build the Vite frontend and deploy `/api/extract-hallticket.ts` as a serverless function.
-
----
-
-## 8. Verification & Tests Run
-
-1. **TypeScript & Bundler Verification**:
-   - Executed `npm run build` using Vite & TypeScript compiler.
-   - Output: Clean production bundle generated in `dist/` with 0 type errors.
-2. **Serverless Dev Middleware**:
-   - Configured Vite middleware in `vite.config.ts` to route `/api/extract-hallticket` directly during local development.
-3. **Database Migration Consistency**:
-   - Verified PostgreSQL DDL syntax, unique constraints, RLS policies, trigger procedures, and seed records for Vijayawada, Guntur, and Hyderabad centres.
-4. **Local Dev Server Execution**:
-   - Launched `npm run dev` at `http://localhost:5173/`.
-   - Verified landing page rendering, dashboard navigation, and registration number privacy toggle.
+Verified test coverage includes:
+- Unique registration number constraint
+- Password recovery / account recovery flow
+- Single exam per student constraint & upsert replacement
+- WhatsApp link format validation (`https://chat.whatsapp.com/...`)
+- Masked registration number privacy protection
+- In-memory OCR extraction without persistent storage

@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { StudentProfile, Branch, AcademicYear } from '../types';
 import { dataService } from '../services/dataService';
-import { INITIAL_STUDENTS } from '../services/mockData';
 
 interface AuthContextType {
   user: StudentProfile | null;
@@ -18,7 +17,8 @@ interface AuthContextType {
   }) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<StudentProfile>) => Promise<void>;
-  switchDemoUser: (studentId: string) => Promise<void>;
+  requestPasswordReset: (regNo: string) => Promise<{ success: boolean; message?: string; error?: string }>;
+  updatePassword: (password: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -77,13 +77,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(updated);
   };
 
-  const switchDemoUser = async (studentId: string) => {
-    const target = INITIAL_STUDENTS.find((s: StudentProfile) => s.id === studentId);
-    if (target) {
-      await dataService.signIn(target.reg_no, 'password123');
-      const updated = await dataService.getCurrentUser();
-      setUser(updated);
-    }
+  const requestPasswordReset = async (regNo: string) => {
+    return dataService.requestPasswordReset(regNo);
+  };
+
+  const updatePassword = async (password: string) => {
+    return dataService.updatePassword(password);
   };
 
   return (
@@ -96,7 +95,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signUp,
         signOut,
         updateProfile,
-        switchDemoUser,
+        requestPasswordReset,
+        updatePassword,
       }}
     >
       {children}

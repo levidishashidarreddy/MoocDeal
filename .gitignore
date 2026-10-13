@@ -10,9 +10,10 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
-*.local
 .env
-.env*.local
+.env.*
+!.env.example
+*.local
 
 # Editor directories and files
 .vscode/*
@@ -24,3 +25,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Supabase CLI & Build Tool Artifacts
+supabase/.temp/
+.vercel
+.temp
+coverage/
+*.tsbuildinfo

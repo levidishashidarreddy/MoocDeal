@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { UserPlus, GraduationCap, AlertCircle, ArrowRight, ShieldCheck } from 'lucide-react';
+import { UserPlus, Layers, AlertCircle, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { BrandedLogo } from '../components/BrandedLogo';
 import { Branch, AcademicYear } from '../types';
 
 interface SignUpPageProps {
@@ -29,11 +30,11 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({ onGoToSignIn, onSuccess 
       return;
     }
     if (!fullName.trim()) {
-      setError('Please enter your full name or chosen display name.');
+      setError('Please enter your full name or display name.');
       return;
     }
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters long.');
+    if (password.length < 4) {
+      setError('Password or PIN must be at least 4 digits or characters.');
       return;
     }
     if (password !== confirmPassword) {
@@ -45,7 +46,7 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({ onGoToSignIn, onSuccess 
       return;
     }
     if (!consent) {
-      setError('Please accept community guidelines and privacy policy.');
+      setError('Please accept community guidelines.');
       return;
     }
 
@@ -65,7 +66,7 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({ onGoToSignIn, onSuccess 
       if (res.success) {
         onSuccess();
       } else {
-        setError(res.error || 'Failed to create account.');
+        setError(res.error || 'Failed to create student account.');
       }
     } catch (err: any) {
       setError(err.message || 'Error occurred during registration.');
@@ -75,23 +76,21 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({ onGoToSignIn, onSuccess 
   };
 
   return (
-    <div className="min-h-[85vh] flex items-center justify-center p-4 bg-slate-50">
-      <div className="bg-white rounded-3xl max-w-lg w-full p-8 shadow-card border border-slate-200/80 space-y-6">
-        
+    <div className="min-h-[85vh] flex items-center justify-center px-3.5 py-8 sm:py-12 animate-fade-in">
+      <div className="w-full max-w-md bg-dark-800 border border-subtle-border rounded-2xl p-5 sm:p-7 shadow-card space-y-6">
+
         {/* Header */}
         <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-2xl bg-navy-900 text-white mx-auto flex items-center justify-center shadow-md">
-            <UserPlus className="w-6 h-6 text-amber-300" />
-          </div>
-          <h2 className="text-2xl font-extrabold text-navy-950">Student Registration</h2>
-          <p className="text-xs text-slate-500">
-            Join the SRM DEALINGS NPTEL buddy network
+          <BrandedLogo size="lg" className="mx-auto" />
+          <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">Create MoocDeal Account</h2>
+          <p className="text-xs text-subtle-text">
+            Join fellow SRM AP students for MOOC & exam buddy discovery
           </p>
         </div>
 
         {error && (
-          <div className="p-3.5 text-xs bg-rose-50 text-rose-700 border border-rose-200 rounded-xl flex items-start gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          <div className="p-3 text-xs bg-rose-500/10 border border-rose-500/20 text-rose-300 rounded-xl flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-400" />
             <span>{error}</span>
           </div>
         )}
@@ -99,7 +98,7 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({ onGoToSignIn, onSuccess 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-medium text-slate-300 mb-1">
                 Registration Number *
               </label>
               <input
@@ -110,14 +109,14 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({ onGoToSignIn, onSuccess 
                   if (error) setError(null);
                 }}
                 placeholder="AP21110010145"
-                className="w-full text-xs font-mono uppercase p-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-navy-700"
+                className="w-full text-xs font-mono uppercase px-3 py-2.5 rounded-xl bg-dark-850 border border-subtle-border text-white placeholder-slate-500 focus:outline-none focus:border-brand-violet min-h-[42px]"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Display Name / Full Name *
+              <label className="block text-xs font-medium text-slate-300 mb-1">
+                Display Name *
               </label>
               <input
                 type="text"
@@ -127,42 +126,38 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({ onGoToSignIn, onSuccess 
                   if (error) setError(null);
                 }}
                 placeholder="e.g. Karthik Varma"
-                className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-navy-700 font-medium"
+                className="w-full text-xs px-3 py-2.5 rounded-xl bg-dark-850 border border-subtle-border text-white placeholder-slate-500 focus:outline-none focus:border-brand-violet min-h-[42px]"
                 required
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Branch *
-              </label>
+              <label className="block text-xs font-medium text-slate-300 mb-1">Branch</label>
               <select
                 value={branch}
                 onChange={e => setBranch(e.target.value as Branch)}
-                className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-navy-700 bg-white"
+                className="w-full text-xs px-2.5 py-2 rounded-xl bg-dark-850 border border-subtle-border text-white focus:outline-none focus:border-brand-violet"
               >
                 <option value="CSE">CSE</option>
                 <option value="ECE">ECE</option>
                 <option value="EEE">EEE</option>
                 <option value="AI_ML">AI & ML</option>
-                <option value="DATA_SCIENCE">Data Science</option>
-                <option value="CYBER_SECURITY">Cyber Security</option>
-                <option value="MECH">Mechanical</option>
+                <option value="DATA_SCIENCE">Data Sci</option>
+                <option value="CYBER_SECURITY">Cyber</option>
+                <option value="MECH">Mech</option>
                 <option value="CIVIL">Civil</option>
-                <option value="OTHER">Other Branch</option>
+                <option value="OTHER">Other</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Academic Year *
-              </label>
+              <label className="block text-xs font-medium text-slate-300 mb-1">Year</label>
               <select
                 value={academicYear}
                 onChange={e => setAcademicYear(e.target.value as AcademicYear)}
-                className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-navy-700 bg-white"
+                className="w-full text-xs px-2.5 py-2 rounded-xl bg-dark-850 border border-subtle-border text-white focus:outline-none focus:border-brand-violet"
               >
                 <option value="1st Year">1st Year</option>
                 <option value="2nd Year">2nd Year</option>
@@ -172,15 +167,13 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({ onGoToSignIn, onSuccess 
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Section *
-              </label>
+              <label className="block text-xs font-medium text-slate-300 mb-1">Section</label>
               <input
                 type="text"
                 value={section}
                 onChange={e => setSection(e.target.value)}
                 placeholder="CSE-A"
-                className="w-full text-xs uppercase p-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-navy-700"
+                className="w-full text-xs uppercase px-2.5 py-2 rounded-xl bg-dark-850 border border-subtle-border text-white placeholder-slate-500 focus:outline-none focus:border-brand-violet"
                 required
               />
             </div>
@@ -188,70 +181,65 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({ onGoToSignIn, onSuccess 
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Password *
-              </label>
+              <label className="block text-xs font-medium text-slate-300 mb-1">Password *</label>
               <input
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder="Min 6 characters"
-                className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-navy-700"
+                placeholder="Min 4 digits or characters"
+                className="w-full text-xs px-3 py-2 rounded-xl bg-dark-850 border border-subtle-border text-white placeholder-slate-500 focus:outline-none focus:border-brand-violet"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Confirm Password *
-              </label>
+              <label className="block text-xs font-medium text-slate-300 mb-1">Confirm Password *</label>
               <input
                 type="password"
                 value={confirmPassword}
                 onChange={e => setConfirmPassword(e.target.value)}
                 placeholder="Re-enter password"
-                className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-navy-700"
+                className="w-full text-xs px-3 py-2 rounded-xl bg-dark-850 border border-subtle-border text-white placeholder-slate-500 focus:outline-none focus:border-brand-violet"
                 required
               />
             </div>
           </div>
 
-          {/* Privacy & Guidelines Checkbox */}
-          <div className="flex items-start gap-2.5 pt-1">
+          <div className="flex items-start gap-2 pt-1">
             <input
               type="checkbox"
               id="consent"
               checked={consent}
               onChange={e => setConsent(e.target.checked)}
-              className="mt-1 rounded text-navy-900 focus:ring-navy-700"
+              className="mt-0.5 rounded bg-dark-850 border-subtle-border text-brand-violet focus:ring-brand-violet"
             />
-            <label htmlFor="consent" className="text-[11px] text-slate-600 leading-normal">
-              I am an enrolled student at SRM University–AP. I agree to keep community WhatsApp groups respectful and adhere to student privacy norms.
+            <label htmlFor="consent" className="text-[11px] text-subtle-text leading-tight">
+              I am an enrolled student at SRM University–AP and agree to respectful community conduct.
             </label>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 text-xs font-bold text-white bg-navy-900 hover:bg-navy-800 disabled:opacity-50 rounded-xl transition-all shadow-md flex items-center justify-center gap-2"
+            className="w-full py-2.5 text-xs font-semibold text-white bg-brand-violet hover:bg-purple-700 disabled:opacity-50 rounded-xl transition-all shadow-glow flex items-center justify-center gap-2"
           >
             {loading ? (
               <span>Creating Account...</span>
             ) : (
               <>
                 <span>Complete Registration</span>
-                <ArrowRight className="w-4 h-4 text-amber-300" />
+                <ArrowRight className="w-3.5 h-3.5" />
               </>
             )}
           </button>
         </form>
 
-        <div className="text-center pt-2 border-t border-slate-100">
-          <p className="text-xs text-slate-500">
+        <div className="text-center pt-2 border-t border-white/5">
+          <p className="text-xs text-subtle-text">
             Already registered?{' '}
             <button
               onClick={onGoToSignIn}
-              className="font-bold text-navy-900 hover:underline"
+              className="font-medium text-brand-accent hover:underline"
             >
               Sign In
             </button>
