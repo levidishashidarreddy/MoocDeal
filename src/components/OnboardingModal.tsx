@@ -28,7 +28,8 @@ import {
 } from '../services/courseMatcher';
 import {
   searchAndRankCentres,
-  CentreMatchResult
+  CentreMatchResult,
+  parsePastedVenueDetails
 } from '../services/centreMatcher';
 import { useAuth } from '../context/AuthContext';
 import confetti from 'canvas-confetti';
@@ -114,6 +115,14 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   const [manualCentreSuggestions, setManualCentreSuggestions] = useState<CentreMatchResult[]>([]);
   const [isManualCentreDropdownOpen, setIsManualCentreDropdownOpen] = useState(false);
 
+  const centreDropdownRef = useRef<HTMLDivElement>(null);
+  const centreInputRef = useRef<HTMLInputElement>(null);
+  const centreSelectedRef = useRef(false);
+
+  const manualCourseDropdownRef = useRef<HTMLDivElement>(null);
+  const manualCourseInputRef = useRef<HTMLInputElement>(null);
+  const courseSelectedRef = useRef(false);
+
   // Submission state
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -192,9 +201,60 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
     return () => clearTimeout(timer);
   }, [noTicketCourseName, noTicketCourseCode, allCourses, selectedCanonicalCourse]);
 
+  // Dismiss dropdowns when user taps/clicks outside or presses Escape
+  useEffect(() => {
+    if (!isManualCentreDropdownOpen && !isManualCourseDropdownOpen) return;
+
+    const handlePointerDown = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as Node;
+      if (
+        isManualCentreDropdownOpen &&
+        centreDropdownRef.current &&
+        !centreDropdownRef.current.contains(target) &&
+        centreInputRef.current &&
+        !centreInputRef.current.contains(target)
+      ) {
+        setIsManualCentreDropdownOpen(false);
+      }
+
+      if (
+        isManualCourseDropdownOpen &&
+        manualCourseDropdownRef.current &&
+        !manualCourseDropdownRef.current.contains(target) &&
+        manualCourseInputRef.current &&
+        !manualCourseInputRef.current.contains(target)
+      ) {
+        setIsManualCourseDropdownOpen(false);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (isManualCentreDropdownOpen) {
+          setIsManualCentreDropdownOpen(false);
+          centreInputRef.current?.blur();
+        }
+        if (isManualCourseDropdownOpen) {
+          setIsManualCourseDropdownOpen(false);
+          manualCourseInputRef.current?.blur();
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('touchstart', handlePointerDown, { passive: true });
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('touchstart', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isManualCentreDropdownOpen, isManualCourseDropdownOpen]);
+
   // Manual entry course matching
   useEffect(() => {
-    if (step !== 'MANUAL_ENTRY') return;
+    if (step !== 'MANUAL_ENTRY' && step !== 'REVIEW_AI') return;
     if (!formData.course_name.trim()) {
       setManualCourseResolution(null);
       setManualCourseSuggestions([]);
@@ -208,24 +268,109 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
       );
       setManualCourseResolution(res);
       setManualCourseSuggestions(res.candidates);
-      setIsManualCourseDropdownOpen(res.candidates.length > 0);
+      if (courseSelectedRef.current) {
+        courseSelectedRef.current = false;
+        setIsManualCourseDropdownOpen(false);
+      }
     }
   }, [formData.course_name, formData.course_code, allCourses, step]);
 
   // Manual entry centre matching
   useEffect(() => {
-    if (step !== 'MANUAL_ENTRY') return;
+    if (step !== 'MANUAL_ENTRY' && step !== 'REVIEW_AI') return;
     if (!formData.centre_name.trim()) {
       setManualCentreSuggestions([]);
       setIsManualCentreDropdownOpen(false);
       return;
     }
     if (allCentres.length > 0) {
-      const results = searchAndRankCentres(formData.centre_name, allCentres, formData.city, { minScore: 0.35, limit: 5 });
+      const results = searchAndRankCentres(
+        {
+          name: formData.centre_name,
+          address: formData.centre_address,
+          city: formData.city,
+          pincode: formData.pincode
+        },
+        allCentres,
+        formData.city,
+        { minScore: 0.35, limit: 5 }
+      );
       setManualCentreSuggestions(results);
-      setIsManualCentreDropdownOpen(results.length > 0);
+      if (centreSelectedRef.current) {
+        centreSelectedRef.current = false;
+        setIsManualCentreDropdownOpen(false);
+      }
     }
-  }, [formData.centre_name, formData.city, allCentres, step]);
+  }, [formData.centre_name, formData.centre_address, formData.city, formData.pincode, allCentres, step]);
+
+  const handleSelectCentre = (centre: ExamCentre) => {
+    centreSelectedRef.current = true;
+    setFormData(prev => ({
+      ...prev,
+      centre_name: centre.name,
+      centre_address: centre.address,
+      city: centre.city,
+      state: centre.state || 'Andhra Pradesh',
+      pincode: centre.pincode || prev.pincode || '',
+    }));
+    setIsManualCentreDropdownOpen(false);
+  };
+
+  const handleSelectCourse = (course: Course) => {
+    courseSelectedRef.current = true;
+    setFormData(prev => ({
+      ...prev,
+      course_name: course.name,
+      course_code: course.code,
+    }));
+    setSelectedCanonicalCourse(course);
+    setIsManualCourseDropdownOpen(false);
+    setManualCourseResolution(null);
+    setSaveError(null);
+  };
+
+  const handleVenuePaste = (e: React.ClipboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const pasted = e.clipboardData.getData('text');
+    if (!pasted || pasted.length < 8) return;
+
+    const parsed = parsePastedVenueDetails(pasted);
+    if (parsed.name || parsed.address || parsed.city || parsed.pincode) {
+      e.preventDefault();
+      const nextName = parsed.name || formData.centre_name;
+      const nextAddress = parsed.address || formData.centre_address;
+      const nextCity = parsed.city || formData.city || 'Vijayawada';
+      const nextState = parsed.state || formData.state || 'Andhra Pradesh';
+      const nextPincode = parsed.pincode || formData.pincode || '';
+
+      setFormData(prev => ({
+        ...prev,
+        centre_name: nextName,
+        centre_address: nextAddress,
+        city: nextCity,
+        state: nextState,
+        pincode: nextPincode,
+      }));
+
+      // Immediately search and suggest existing canonical centres
+      if (allCentres.length > 0) {
+        const results = searchAndRankCentres(
+          {
+            name: nextName,
+            address: nextAddress,
+            city: nextCity,
+            pincode: nextPincode,
+          },
+          allCentres,
+          nextCity,
+          { minScore: 0.35, limit: 5 }
+        );
+        setManualCentreSuggestions(results);
+        if (results.length > 0) {
+          setIsManualCentreDropdownOpen(true);
+        }
+      }
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -285,9 +430,24 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         }),
       });
 
-      const resJson = await response.json();
-      if (!resJson.success) {
-        throw new Error(resJson.error || 'Failed to extract hall ticket data.');
+      let resJson: any = null;
+      try {
+        const text = await response.text();
+        resJson = JSON.parse(text);
+      } catch {
+        if (response.status === 504) {
+          throw new Error('AI extraction service timed out while analyzing your admit card. Please enter details manually.');
+        } else if (response.status === 413) {
+          throw new Error('Admit card file is too large for the AI service. Please crop the image or enter details manually.');
+        } else if (response.status === 503) {
+          throw new Error('Vision AI service is currently experiencing high demand. Please enter details manually.');
+        } else {
+          throw new Error('AI vision service is temporarily unavailable. Please enter details manually.');
+        }
+      }
+
+      if (!response.ok || !resJson?.success) {
+        throw new Error(resJson?.error || 'Failed to extract hall ticket data. Please enter details manually.');
       }
 
       const extracted: HallTicketExtractionResult = resJson.data;
@@ -376,7 +536,11 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
     const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
     if (!validTypes.includes(file.type)) {
-      setExtractionError('Please upload a valid image file (JPEG, PNG, or WebP).');
+      if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+        setExtractionError('NPTEL hall tickets are PDF files. Please upload a screenshot or photo of your hall ticket (JPEG, PNG, WebP), or switch to manual entry below.');
+      } else {
+        setExtractionError('Please upload a valid image file (JPEG, PNG, or WebP).');
+      }
       return;
     }
 
@@ -650,53 +814,30 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Option 1: Upload Hall Ticket (PRIMARY / RECOMMENDED) */}
-              <div
-                onClick={() => setStep('UPLOAD_AI')}
-                className="group p-5 rounded-2xl border border-subtle-border hover:border-brand-violet bg-dark-850 hover:bg-dark-750 transition-all cursor-pointer flex flex-col justify-between"
-              >
-                <div>
-                  <div className="w-10 h-10 rounded-xl bg-brand-violet/10 text-brand-accent flex items-center justify-center mb-3">
-                    <Sparkles className="w-5 h-5" />
-                  </div>
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-brand-accent bg-brand-violet/20 px-2 py-0.5 rounded">
-                    Recommended
-                  </span>
-                  <h4 className="text-xs font-bold text-white mt-2">
-                    Upload Hall Ticket
-                  </h4>
-                  <p className="text-[11px] text-subtle-text mt-1 leading-relaxed">
-                    AI automatically extracts your exam venue, date, and reporting slot with in-memory zero retention.
-                  </p>
-                </div>
-                <div className="mt-4 flex items-center text-xs font-semibold text-brand-accent group-hover:translate-x-1 transition-transform">
-                  <span>Upload Admit Card</span>
-                  <ArrowRight className="w-3.5 h-3.5 ml-1" />
-                </div>
-              </div>
-
-              {/* Option 2: I Don't Have Hall Ticket Yet */}
+            <div className="flex flex-col gap-4">
+              {/* Option 1: I Don't Have My Hall Ticket Yet (PRIMARY / RECOMMENDED) */}
               <div
                 onClick={() => setStep('NO_HALL_TICKET')}
-                className="group p-5 rounded-2xl border border-subtle-border hover:border-slate-500 bg-dark-850 hover:bg-dark-750 transition-all cursor-pointer flex flex-col justify-between"
+                className="group p-5 sm:p-6 rounded-2xl border-2 border-brand-violet/50 hover:border-brand-violet bg-dark-850 hover:bg-dark-750 transition-all cursor-pointer flex flex-col justify-between shadow-glow/10"
               >
                 <div>
-                  <div className="w-10 h-10 rounded-xl bg-white/5 text-slate-300 flex items-center justify-center mb-3">
-                    <BookOpen className="w-5 h-5" />
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="w-10 h-10 rounded-xl bg-brand-violet/20 text-brand-accent flex items-center justify-center">
+                      <BookOpen className="w-5 h-5" />
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-brand-accent bg-brand-violet/20 border border-brand-violet/30 px-2.5 py-1 rounded-full">
+                      Recommended
+                    </span>
                   </div>
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 bg-white/5 px-2 py-0.5 rounded">
-                    Admit Card Pending
-                  </span>
-                  <h4 className="text-xs font-bold text-white mt-2">
-                    I Don't Have Hall Ticket Yet
+                  <h4 className="text-sm sm:text-base font-bold text-white mt-1">
+                    I Don't Have My Hall Ticket Yet
                   </h4>
-                  <p className="text-[11px] text-subtle-text mt-1 leading-relaxed">
+                  <p className="text-xs text-subtle-text mt-1.5 leading-relaxed">
                     Don't have your hall ticket yet? Enter your course details manually and connect with study peers. You can upload your hall ticket later to verify your exam centre and reporting slot.
                   </p>
                 </div>
-                <div className="mt-4 space-y-2">
-                  <div className="flex items-center text-xs font-semibold text-slate-400 group-hover:translate-x-1 transition-transform">
+                <div className="mt-5 pt-3 border-t border-white/5 space-y-2.5">
+                  <div className="flex items-center text-xs font-semibold text-brand-accent group-hover:translate-x-1 transition-transform">
                     <span>Course Only</span>
                     <ArrowRight className="w-3.5 h-3.5 ml-1" />
                   </div>
@@ -706,11 +847,38 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                       e.stopPropagation();
                       handleOpenManualEntry();
                     }}
-                    className="text-[11px] text-subtle-text hover:text-white underline inline-flex items-center gap-1.5 text-left transition-colors"
+                    className="text-[11px] sm:text-xs text-subtle-text hover:text-white underline inline-flex items-center gap-1.5 text-left transition-colors font-medium min-h-[36px]"
                   >
-                    <Edit3 className="w-3.5 h-3.5 shrink-0" />
+                    <Edit3 className="w-3.5 h-3.5 shrink-0 text-brand-accent" />
                     <span>Prefer to enter all exam details manually? Click here</span>
                   </button>
+                </div>
+              </div>
+
+              {/* Option 2: Upload Hall Ticket (SECONDARY) */}
+              <div
+                onClick={() => setStep('UPLOAD_AI')}
+                className="group p-4 sm:p-5 rounded-2xl border border-subtle-border hover:border-slate-500 bg-dark-850/70 hover:bg-dark-750 transition-all cursor-pointer flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="w-9 h-9 rounded-xl bg-brand-violet/10 text-brand-accent flex items-center justify-center">
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded">
+                      Secondary Option · Beta AI OCR
+                    </span>
+                  </div>
+                  <h4 className="text-xs sm:text-sm font-bold text-slate-200 mt-1">
+                    Upload Hall Ticket
+                  </h4>
+                  <p className="text-[11px] text-subtle-text mt-1 leading-relaxed">
+                    Have your NPTEL admit card image handy? You can attempt automated extraction of venue and reporting slot via in-memory OCR. (You can always verify or edit all details manually).
+                  </p>
+                </div>
+                <div className="mt-4 flex items-center text-xs font-semibold text-slate-400 group-hover:text-white group-hover:translate-x-1 transition-transform">
+                  <span>Upload Admit Card</span>
+                  <ArrowRight className="w-3.5 h-3.5 ml-1" />
                 </div>
               </div>
             </div>
@@ -760,12 +928,23 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
             )}
 
             {extractionError && (
-              <div className="p-4 text-xs bg-rose-500/10 border border-rose-500/20 text-rose-300 rounded-xl space-y-2">
-                <div className="flex items-start gap-2">
+              <div className="p-4 text-xs bg-rose-500/10 border border-rose-500/20 text-rose-300 rounded-xl space-y-3">
+                <div className="flex items-start gap-2.5">
                   <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-rose-400" />
-                  <span className="leading-relaxed">{extractionError}</span>
+                  <div className="space-y-1">
+                    <p className="font-semibold text-rose-200">Hall Ticket Extraction Notice</p>
+                    <p className="leading-relaxed text-rose-300/90">{extractionError}</p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3 pt-1">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={handleOpenManualEntry}
+                    className="px-4 py-2.5 rounded-xl bg-brand-violet hover:bg-purple-600 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-2 shadow-glow min-h-[44px]"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span>Continue with Manual Entry →</span>
+                  </button>
                   <button
                     type="button"
                     onClick={() => {
@@ -774,16 +953,9 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                       setFilePreview(null);
                       if (fileInputRef.current) fileInputRef.current.value = '';
                     }}
-                    className="text-[11px] font-semibold text-white underline hover:text-brand-accent"
+                    className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 font-medium text-xs transition-colors text-center min-h-[40px] flex items-center justify-center"
                   >
                     Retry with another image
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleOpenManualEntry}
-                    className="text-[11px] text-subtle-text underline hover:text-white"
-                  >
-                    Switch to manual entry
                   </button>
                 </div>
               </div>
@@ -1070,166 +1242,192 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                 </div>
               )}
 
-              {/* Course Name & Code */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className={`sm:col-span-2 p-2 rounded-xl relative transition-all ${
-                  isFieldAmbiguous('course_name') ? 'bg-amber-500/5 border border-amber-500/30' : ''
-                }`}>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-[11px] font-medium text-slate-300">
-                      MOOC Course Name *
-                    </label>
-                    {isFieldAmbiguous('course_name') && (
-                      <span className="text-[10px] text-amber-400 font-semibold">Flagged</span>
+              {/* Section 1: Course Details */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 pb-1 text-slate-300 font-semibold text-xs uppercase tracking-wider">
+                  <BookOpen className="w-3.5 h-3.5 text-brand-accent" />
+                  <span>1. MOOC Course Details</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className={`sm:col-span-2 relative transition-all ${
+                    isFieldAmbiguous('course_name') ? 'p-2 rounded-xl bg-amber-500/5 border border-amber-500/30' : ''
+                  }`}>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-[11px] font-medium text-slate-300">
+                        MOOC Course Name *
+                      </label>
+                      {isFieldAmbiguous('course_name') && (
+                        <span className="text-[10px] text-amber-400 font-semibold">Flagged</span>
+                      )}
+                    </div>
+                    <input
+                      ref={manualCourseInputRef}
+                      type="text"
+                      value={formData.course_name}
+                      onChange={e => {
+                        setFormData({ ...formData, course_name: e.target.value });
+                        setIsManualCourseDropdownOpen(true);
+                      }}
+                      onFocus={() => {
+                        if (manualCourseSuggestions.length > 0) setIsManualCourseDropdownOpen(true);
+                      }}
+                      onClick={() => {
+                        if (manualCourseSuggestions.length > 0) setIsManualCourseDropdownOpen(prev => !prev);
+                      }}
+                      placeholder="e.g. Deep Learning"
+                      className="w-full h-11 text-xs px-3 py-2 rounded-xl bg-dark-850 border border-subtle-border text-white focus:outline-none focus:border-brand-violet transition-colors"
+                      required
+                    />
+
+                    {/* Course Dropdown */}
+                    {isManualCourseDropdownOpen && manualCourseSuggestions.length > 0 && (
+                      <div
+                        ref={manualCourseDropdownRef}
+                        className="absolute left-0 right-0 mt-1 z-30 bg-dark-900 border border-white/20 rounded-xl shadow-2xl max-h-52 overflow-y-auto overscroll-contain touch-pan-y divide-y divide-white/5"
+                      >
+                        <div className="sticky top-0 z-10 px-3 py-1.5 text-[10px] uppercase font-semibold text-subtle-text bg-dark-900 border-b border-white/10 flex items-center justify-between">
+                          <span>Official SRM AP Courses ({manualCourseSuggestions.length})</span>
+                          <button
+                            type="button"
+                            onClick={() => setIsManualCourseDropdownOpen(false)}
+                            className="text-subtle-text hover:text-white px-1.5 py-0.5 rounded text-[10px]"
+                          >
+                            ✕ Close
+                          </button>
+                        </div>
+                        {manualCourseSuggestions.map(item => (
+                          <div
+                            key={item.course.id}
+                            onClick={() => handleSelectCourse(item.course)}
+                            className="p-3 hover:bg-white/5 cursor-pointer transition-colors flex items-center justify-between text-xs min-h-[44px]"
+                          >
+                            <div>
+                              <p className="font-semibold text-white">{item.course.name}</p>
+                              <p className="text-[10px] font-mono text-subtle-text">{item.course.code}</p>
+                            </div>
+                            {item.isStrongMatch ? (
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                                Verified
+                              </span>
+                            ) : (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400">
+                                Similar
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {selectedCanonicalCourse && (
+                      <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-emerald-400 font-medium">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>Official SRM AP MOOC: {selectedCanonicalCourse.name} ({selectedCanonicalCourse.code})</span>
+                      </div>
+                    )}
+
+                    {formData.course_name.trim().length >= 2 && manualCourseSuggestions.length === 0 && !selectedCanonicalCourse && (
+                      <div className="mt-2 p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-start gap-2">
+                        <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                        <span>Course not found in the official SRM AP course list. Please check the name or contact SRM DEALINGS.</span>
+                      </div>
                     )}
                   </div>
-                  <input
-                    type="text"
-                    value={formData.course_name}
-                    onChange={e => {
-                      setFormData({ ...formData, course_name: e.target.value });
-                      setIsManualCourseDropdownOpen(true);
-                    }}
-                    onFocus={() => {
-                      if (manualCourseSuggestions.length > 0) setIsManualCourseDropdownOpen(true);
-                    }}
-                    placeholder="e.g. Deep Learning"
-                    className="w-full text-xs px-3 py-2 rounded-xl bg-dark-850 border border-subtle-border text-white focus:outline-none focus:border-brand-violet"
-                    required
-                  />
 
-                  {/* Course Dropdown */}
-                  {isManualCourseDropdownOpen && manualCourseSuggestions.length > 0 && (
-                    <div className="absolute left-2 right-2 mt-1 z-30 bg-dark-850 border border-white/15 rounded-xl shadow-2xl max-h-48 overflow-y-auto divide-y divide-white/5">
-                      {manualCourseSuggestions.map(item => (
-                        <div
-                          key={item.course.id}
-                          onClick={() => {
-                            setFormData({
-                              ...formData,
-                              course_name: item.course.name,
-                              course_code: item.course.code,
-                            });
-                            setSelectedCanonicalCourse(item.course);
-                            setIsManualCourseDropdownOpen(false);
-                            setManualCourseResolution(null);
-                            setSaveError(null);
-                          }}
-                          className="p-2.5 hover:bg-white/5 cursor-pointer transition-colors flex items-center justify-between text-xs"
-                        >
-                          <div>
-                            <p className="font-semibold text-white">{item.course.name}</p>
-                            <p className="text-[10px] font-mono text-subtle-text">{item.course.code}</p>
-                          </div>
-                          {item.isStrongMatch ? (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                              Verified
-                            </span>
-                          ) : (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400">
-                              Similar
-                            </span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {selectedCanonicalCourse && (
-                    <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-emerald-400 font-medium">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>Official SRM AP MOOC: {selectedCanonicalCourse.name} ({selectedCanonicalCourse.code})</span>
-                    </div>
-                  )}
-
-                  {formData.course_name.trim().length >= 2 && manualCourseSuggestions.length === 0 && !selectedCanonicalCourse && (
-                    <div className="mt-2 p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-start gap-2">
-                      <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-                      <span>Course not found in the official SRM AP course list. Please check the name or contact SRM DEALINGS.</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className={`p-2 rounded-xl transition-all ${
-                  isFieldAmbiguous('course_code') ? 'bg-amber-500/5 border border-amber-500/30' : ''
-                }`}>
-                  <label className="block text-[11px] font-medium text-slate-300 mb-1">
-                    Course Code
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.course_code}
-                    onChange={e => setFormData({ ...formData, course_code: e.target.value })}
-                    placeholder="noc24-cs101"
-                    className="w-full text-xs font-mono px-3 py-2 rounded-xl bg-dark-850 border border-subtle-border text-white focus:outline-none focus:border-brand-violet"
-                  />
+                  <div className={`sm:col-span-1 transition-all ${
+                    isFieldAmbiguous('course_code') ? 'p-2 rounded-xl bg-amber-500/5 border border-amber-500/30' : ''
+                  }`}>
+                    <label className="block text-[11px] font-medium text-slate-300 mb-1">
+                      Course Code
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.course_code}
+                      onChange={e => setFormData({ ...formData, course_code: e.target.value })}
+                      placeholder="noc24-cs101"
+                      className="w-full h-11 text-xs font-mono px-3 py-2 rounded-xl bg-dark-850 border border-subtle-border text-white focus:outline-none focus:border-brand-violet"
+                    />
+                  </div>
                 </div>
               </div>
 
-              {/* Schedule Details */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className={`p-2 rounded-xl transition-all ${
-                  isFieldAmbiguous('exam_date') ? 'bg-amber-500/5 border border-amber-500/30' : ''
-                }`}>
-                  <label className="block text-[11px] font-medium text-slate-300 mb-1 flex items-center gap-1">
-                    <Calendar className="w-3 h-3 text-subtle-text" />
-                    <span>Exam Date *</span>
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.exam_date}
-                    onChange={e => setFormData({ ...formData, exam_date: e.target.value })}
-                    className="w-full text-xs px-3 py-2 rounded-xl bg-dark-850 border border-subtle-border text-white focus:outline-none focus:border-brand-violet"
-                    required
-                  />
+              {/* Section 2: Exam Schedule */}
+              <div className="space-y-2 pt-3 border-t border-white/5">
+                <div className="flex items-center gap-2 pb-1 text-slate-300 font-semibold text-xs uppercase tracking-wider">
+                  <Clock className="w-3.5 h-3.5 text-brand-accent" />
+                  <span>2. Exam Schedule</span>
                 </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className={`transition-all ${
+                    isFieldAmbiguous('exam_date') ? 'p-2 rounded-xl bg-amber-500/5 border border-amber-500/30' : ''
+                  }`}>
+                    <label className="block text-[11px] font-medium text-slate-300 mb-1 flex items-center gap-1">
+                      <Calendar className="w-3 h-3 text-subtle-text" />
+                      <span>Exam Date *</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.exam_date}
+                      onChange={e => setFormData({ ...formData, exam_date: e.target.value })}
+                      className="w-full h-11 text-xs px-3 py-2 rounded-xl bg-dark-850 border border-subtle-border text-white focus:outline-none focus:border-brand-violet"
+                      required
+                    />
+                  </div>
 
-                <div className={`p-2 rounded-xl transition-all ${
-                  isFieldAmbiguous('reporting_time') ? 'bg-amber-500/5 border border-amber-500/30' : ''
-                }`}>
-                  <label className="block text-[11px] font-medium text-brand-accent mb-1 flex items-center gap-1">
-                    <Clock className="w-3 h-3 text-brand-accent" />
-                    <span>Reporting Time *</span>
-                  </label>
-                  <input
-                    type="time"
-                    value={formData.reporting_time}
-                    onChange={e => {
-                      setFormData({ ...formData, reporting_time: e.target.value });
-                      validateTimes(e.target.value, formData.exam_start_time);
-                    }}
-                    className="w-full text-xs font-mono px-3 py-2 rounded-xl bg-dark-850 border border-brand-violet/50 text-white focus:outline-none focus:border-brand-violet"
-                    required
-                  />
-                </div>
+                  <div className={`transition-all ${
+                    isFieldAmbiguous('reporting_time') ? 'p-2 rounded-xl bg-amber-500/5 border border-amber-500/30' : ''
+                  }`}>
+                    <label className="block text-[11px] font-medium text-brand-accent mb-1 flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-brand-accent" />
+                      <span>Reporting Time *</span>
+                    </label>
+                    <input
+                      type="time"
+                      value={formData.reporting_time}
+                      onChange={e => {
+                        setFormData({ ...formData, reporting_time: e.target.value });
+                        validateTimes(e.target.value, formData.exam_start_time);
+                      }}
+                      className="w-full h-11 text-xs font-mono px-3 py-2 rounded-xl bg-dark-850 border border-brand-violet/50 text-white focus:outline-none focus:border-brand-violet"
+                      required
+                    />
+                  </div>
 
-                <div className={`p-2 rounded-xl transition-all ${
-                  isFieldAmbiguous('shift') ? 'bg-amber-500/5 border border-amber-500/30' : ''
-                }`}>
-                  <label className="block text-[11px] font-medium text-slate-300 mb-1">
-                    Shift
-                  </label>
-                  <select
-                    value={formData.shift}
-                    onChange={e => setFormData({ ...formData, shift: e.target.value as 'FN' | 'AN' })}
-                    className="w-full text-xs px-3 py-2 rounded-xl bg-dark-850 border border-subtle-border text-white focus:outline-none focus:border-brand-violet"
-                  >
-                    <option value="FN">FN (Morning)</option>
-                    <option value="AN">AN (Afternoon)</option>
-                  </select>
+                  <div className={`transition-all ${
+                    isFieldAmbiguous('shift') ? 'p-2 rounded-xl bg-amber-500/5 border border-amber-500/30' : ''
+                  }`}>
+                    <label className="block text-[11px] font-medium text-slate-300 mb-1">
+                      Shift
+                    </label>
+                    <select
+                      value={formData.shift}
+                      onChange={e => setFormData({ ...formData, shift: e.target.value as 'FN' | 'AN' })}
+                      className="w-full h-11 text-xs px-3 py-2 rounded-xl bg-dark-850 border border-subtle-border text-white focus:outline-none focus:border-brand-violet"
+                    >
+                      <option value="FN">FN (Morning)</option>
+                      <option value="AN">AN (Afternoon)</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
-              {/* Centre Information */}
-              <div className="space-y-2 pt-2 border-t border-white/5">
-                <div className={`p-2 rounded-xl relative transition-all ${
-                  isFieldAmbiguous('centre_name') ? 'bg-amber-500/5 border border-amber-500/30' : ''
+              {/* Section 3: Test Centre Logistics */}
+              <div className="space-y-3 pt-3 border-t border-white/5">
+                <div className="flex items-center gap-2 pb-1 text-slate-300 font-semibold text-xs uppercase tracking-wider">
+                  <MapPin className="w-3.5 h-3.5 text-brand-accent" />
+                  <span>3. Test Centre Logistics</span>
+                </div>
+
+                {/* Centre Name */}
+                <div className={`relative transition-all ${
+                  isFieldAmbiguous('centre_name') ? 'p-2 rounded-xl bg-amber-500/5 border border-amber-500/30' : ''
                 }`}>
                   <label className="block text-[11px] font-medium text-slate-300 mb-1 flex items-center gap-1">
                     <MapPin className="w-3 h-3 text-subtle-text" />
                     <span>Test Centre Name *</span>
                   </label>
                   <input
+                    ref={centreInputRef}
                     type="text"
                     value={formData.centre_name}
                     onChange={e => {
@@ -1239,43 +1437,47 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                     onFocus={() => {
                       if (manualCentreSuggestions.length > 0) setIsManualCentreDropdownOpen(true);
                     }}
+                    onClick={() => {
+                      if (manualCentreSuggestions.length > 0) setIsManualCentreDropdownOpen(prev => !prev);
+                    }}
+                    onPaste={handleVenuePaste}
                     placeholder="e.g. iON Digital Zone iDZ Patamata"
-                    className="w-full text-xs px-3 py-2 rounded-xl bg-dark-850 border border-subtle-border text-white focus:outline-none focus:border-brand-violet"
+                    className="w-full h-11 text-xs px-3 py-2 rounded-xl bg-dark-850 border border-subtle-border text-white focus:outline-none focus:border-brand-violet"
                     required
                   />
 
                   {/* Centre Autocomplete Dropdown */}
                   {isManualCentreDropdownOpen && manualCentreSuggestions.length > 0 && (
-                    <div className="absolute left-2 right-2 mt-1 z-30 bg-dark-850 border border-white/15 rounded-xl shadow-2xl max-h-48 overflow-y-auto divide-y divide-white/5">
-                      <div className="px-3 py-1.5 text-[10px] uppercase font-semibold text-subtle-text bg-dark-900 tracking-wider">
-                        Existing Exam Centres ({manualCentreSuggestions.length})
+                    <div
+                      ref={centreDropdownRef}
+                      className="absolute left-0 right-0 mt-1 z-30 bg-dark-900 border border-white/20 rounded-xl shadow-2xl max-h-52 overflow-y-auto overscroll-contain touch-pan-y divide-y divide-white/5"
+                    >
+                      <div className="sticky top-0 z-10 px-3 py-2 text-[10px] uppercase font-semibold text-subtle-text bg-dark-900 border-b border-white/10 flex items-center justify-between tracking-wider">
+                        <span>Existing Exam Centres ({manualCentreSuggestions.length})</span>
+                        <button
+                          type="button"
+                          onClick={() => setIsManualCentreDropdownOpen(false)}
+                          className="text-subtle-text hover:text-white px-2 py-0.5 rounded text-[10px] bg-white/5 hover:bg-white/10"
+                        >
+                          ✕ Close
+                        </button>
                       </div>
                       {manualCentreSuggestions.map(item => (
                         <div
                           key={item.centre.id}
-                          onClick={() => {
-                            setFormData({
-                              ...formData,
-                              centre_name: item.centre.name,
-                              centre_address: item.centre.address,
-                              city: item.centre.city,
-                              state: item.centre.state || 'Andhra Pradesh',
-                              pincode: item.centre.pincode || '',
-                            });
-                            setIsManualCentreDropdownOpen(false);
-                          }}
-                          className="p-2.5 hover:bg-white/5 cursor-pointer transition-colors flex items-center justify-between text-xs"
+                          onClick={() => handleSelectCentre(item.centre)}
+                          className="p-3 hover:bg-white/5 cursor-pointer transition-colors flex items-center justify-between text-xs min-h-[44px]"
                         >
-                          <div>
-                            <p className="font-semibold text-white">{item.centre.name}</p>
-                            <p className="text-[10px] text-subtle-text truncate max-w-xs">{item.centre.address} · {item.centre.city}</p>
+                          <div className="min-w-0 pr-2">
+                            <p className="font-semibold text-white truncate">{item.centre.name}</p>
+                            <p className="text-[10px] text-subtle-text truncate">{item.centre.address} · {item.centre.city}</p>
                           </div>
                           {item.centre.is_verified ? (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-medium">
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-medium shrink-0">
                               Verified
                             </span>
                           ) : (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400">
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400 shrink-0">
                               Known Venue
                             </span>
                           )}
@@ -1285,37 +1487,46 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                   )}
                 </div>
 
-                <div className="p-2">
+                {/* Centre Address */}
+                <div>
                   <label className="block text-[11px] font-medium text-slate-300 mb-1">
-                    Centre Address
+                    Centre Address *
                   </label>
                   <input
                     type="text"
                     value={formData.centre_address}
                     onChange={e => setFormData({ ...formData, centre_address: e.target.value })}
-                    placeholder="Street, locality, landmark"
-                    className="w-full text-xs px-3 py-2 rounded-xl bg-dark-850 border border-subtle-border text-white focus:outline-none focus:border-brand-violet"
+                    onPaste={handleVenuePaste}
+                    placeholder="Paste the exam centre name and full address exactly as printed on your hall ticket."
+                    className="w-full h-11 text-xs px-3 py-2 rounded-xl bg-dark-850 border border-subtle-border text-white focus:outline-none focus:border-brand-violet"
+                    required
                   />
+                  <p className="text-[11px] text-subtle-text mt-1.5 leading-relaxed">
+                    Copying the printed centre name and address helps find the correct existing centre and prevents duplicate entries.
+                  </p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-2">
+                {/* City, State, Pincode */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-[11px] font-medium text-slate-300 mb-1">City</label>
+                    <label className="block text-[11px] font-medium text-slate-300 mb-1">City *</label>
                     <input
                       type="text"
                       value={formData.city}
                       onChange={e => setFormData({ ...formData, city: e.target.value })}
-                      className="w-full text-xs px-3 py-2 rounded-xl bg-dark-850 border border-subtle-border text-white focus:outline-none focus:border-brand-violet"
+                      className="w-full h-11 text-xs px-3 py-2 rounded-xl bg-dark-850 border border-subtle-border text-white focus:outline-none focus:border-brand-violet"
+                      required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-medium text-slate-300 mb-1">State</label>
+                    <label className="block text-[11px] font-medium text-slate-300 mb-1">State *</label>
                     <input
                       type="text"
                       value={formData.state}
                       onChange={e => setFormData({ ...formData, state: e.target.value })}
-                      className="w-full text-xs px-3 py-2 rounded-xl bg-dark-850 border border-subtle-border text-white focus:outline-none focus:border-brand-violet"
+                      className="w-full h-11 text-xs px-3 py-2 rounded-xl bg-dark-850 border border-subtle-border text-white focus:outline-none focus:border-brand-violet"
+                      required
                     />
                   </div>
 
@@ -1327,18 +1538,18 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                       onChange={e => setFormData({ ...formData, pincode: e.target.value })}
                       placeholder="520010"
                       maxLength={6}
-                      className="w-full text-xs font-mono px-3 py-2 rounded-xl bg-dark-850 border border-subtle-border text-white focus:outline-none focus:border-brand-violet"
+                      className="w-full h-11 text-xs font-mono px-3 py-2 rounded-xl bg-dark-850 border border-subtle-border text-white focus:outline-none focus:border-brand-violet"
                     />
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-3 border-t border-white/5 gap-2">
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between pt-4 border-t border-white/5 gap-2.5">
               <button
                 type="button"
                 onClick={() => setStep('CHOICE')}
-                className="px-4 py-2.5 text-xs text-subtle-text hover:text-white min-h-[42px]"
+                className="px-4 py-2.5 text-xs text-subtle-text hover:text-white rounded-xl bg-white/5 sm:bg-transparent min-h-[44px] text-center flex items-center justify-center transition-colors"
               >
                 Cancel
               </button>

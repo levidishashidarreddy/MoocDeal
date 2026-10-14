@@ -26,7 +26,7 @@ import {
   INITIAL_REPORTS
 } from './mockData';
 import { resolveCanonicalCourseMatch } from './courseMatcher';
-import { resolveCanonicalCentreMatch } from './centreMatcher';
+import { resolveCanonicalCentreMatch, calculateCentreMatch, normalizeCentreText, normalizeCity } from './centreMatcher';
 
 // Normalization helpers
 export const normalizeRegNo = (reg: string): string => reg.trim().toUpperCase();
@@ -483,7 +483,7 @@ export const dataService = {
   }): Promise<ExamCentre> {
     const rawName = params.name.trim();
     const city = params.city.trim() || 'Vijayawada';
-    const lockKey = `${normalizeText(rawName)}_${city.toLowerCase()}`;
+    const lockKey = `${normalizeCentreText(rawName)}_${normalizeCity(city)}`;
 
     if (centreCreationLocks.has(lockKey)) {
       return centreCreationLocks.get(lockKey)!;
@@ -503,7 +503,20 @@ export const dataService = {
         return resolution.matchedCentre;
       }
 
-      const normalized = normalizeText(rawName);
+      // Check if any existing centre matches via calculateCentreMatch
+      for (const cand of centres) {
+        const directMatch = calculateCentreMatch({
+          name: rawName,
+          address: params.address,
+          city: city,
+          pincode: params.pincode,
+        }, cand);
+        if (directMatch.isStrongMatch) {
+          return cand;
+        }
+      }
+
+      const normalized = normalizeCentreText(rawName);
 
       if (isSupabaseConfigured() && supabase) {
         // 1. Try atomic server-side RPC first
@@ -526,15 +539,25 @@ export const dataService = {
           console.warn('RPC resolve_or_create_centre failed, falling back to query/insert:', err);
         }
 
-        // 2. Query fallback
-        const { data: existing } = await supabase
+        // 2. Query fallback with deep matching before insert
+        const { data: cityCentres } = await supabase
           .from('centres')
           .select('*')
-          .eq('normalized_name', normalized)
-          .ilike('city', city)
-          .maybeSingle();
+          .ilike('city', city);
 
-        if (existing) return existing;
+        if (cityCentres && cityCentres.length > 0) {
+          for (const cand of cityCentres) {
+            const m = calculateCentreMatch({
+              name: rawName,
+              address: params.address,
+              city: city,
+              pincode: params.pincode,
+            }, cand as ExamCentre);
+            if (m.isStrongMatch) {
+              return cand as ExamCentre;
+            }
+          }
+        }
 
         // Suggest new pending centre
         const newCentre = {
@@ -559,9 +582,26 @@ export const dataService = {
 
       const localCentres = localStore.getCentres();
       const existing = localCentres.find(
-        c => c.normalized_name === normalized && c.city.toLowerCase() === city.toLowerCase()
+        c => (
+          c.normalized_name === normalized ||
+          normalizeCentreText(c.name) === normalized ||
+          normalizeCentreText(c.name) === normalizeCentreText(rawName)
+        ) && normalizeCity(c.city) === normalizeCity(city)
       );
       if (existing) return existing;
+
+      // Deep fuzzy check against local centres
+      for (const cand of localCentres) {
+        const m = calculateCentreMatch({
+          name: rawName,
+          address: params.address,
+          city: city,
+          pincode: params.pincode,
+        }, cand);
+        if (m.isStrongMatch) {
+          return cand;
+        }
+      }
 
       const newCentre: ExamCentre = {
         id: `ctr-${Date.now()}`,

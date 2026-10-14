@@ -24,41 +24,34 @@ describe('Exam Setup Flow Options Order & Wording Verification', () => {
     const modalPath = path.resolve(__dirname, '../components/OnboardingModal.tsx');
     const modalContent = fs.readFileSync(modalPath, 'utf-8');
 
-    it('displays Option 1: Upload Hall Ticket before Option 2 in the choice screen', () => {
-      const option1Index = modalContent.indexOf('Option 1: Upload Hall Ticket');
-      const option2Index = modalContent.indexOf('Option 2: I Don\'t Have Hall Ticket Yet');
+    it('displays Option 1: I Don\'t Have My Hall Ticket Yet before Option 2 in the choice screen', () => {
+      const option1Index = modalContent.indexOf('Option 1: I Don\'t Have My Hall Ticket Yet');
+      const option2Index = modalContent.indexOf('Option 2: Upload Hall Ticket');
 
       expect(option1Index).toBeGreaterThan(-1);
       expect(option2Index).toBeGreaterThan(-1);
       expect(option1Index).toBeLessThan(option2Index);
     });
 
-    it('has "Upload Hall Ticket" as the heading and Recommended badge for Option 1', () => {
-      expect(modalContent).toContain('Upload Hall Ticket');
+    it('has "I Don\'t Have My Hall Ticket Yet" as the heading and Primary / Recommended badge for Option 1', () => {
+      expect(modalContent).toContain("I Don't Have My Hall Ticket Yet");
       expect(modalContent).toContain('Recommended');
-      expect(modalContent).toContain('UPLOAD_AI');
-    });
-
-    it('has "I Don\'t Have Hall Ticket Yet" as the heading and updated description for Option 2', () => {
-      expect(modalContent).toContain('I Don\'t Have Hall Ticket Yet');
-      expect(modalContent).toContain(
-        "Don't have your hall ticket yet? Enter your course details manually and connect with study peers. You can upload your hall ticket later to verify your exam centre and reporting slot."
-      );
       expect(modalContent).toContain('NO_HALL_TICKET');
     });
 
-    it('contains "Prefer to enter all exam details manually? Click here" inside Option 2 and no duplicate outside', () => {
-      const option2Start = modalContent.indexOf('Option 2: I Don\'t Have Hall Ticket Yet');
-      const option2End = modalContent.indexOf('Zero-Storage Guarantee: Hall tickets are processed');
-      const option2Block = modalContent.slice(option2Start, option2End);
+    it('has "Upload Hall Ticket" as the heading for Option 2 placed below', () => {
+      expect(modalContent).toContain('Upload Hall Ticket');
+      expect(modalContent).toContain('UPLOAD_AI');
+    });
 
-      expect(option2Block).toContain('Prefer to enter all exam details manually? Click here');
-      expect(option2Block).toContain('handleOpenManualEntry()');
-      expect(option2Block).toContain('stopPropagation()');
+    it('contains "Prefer to enter all exam details manually? Click here" inside Option 1 and no duplicate outside', () => {
+      const option1Start = modalContent.indexOf('Option 1: I Don\'t Have My Hall Ticket Yet');
+      const option1End = modalContent.indexOf('Option 2: Upload Hall Ticket');
+      const option1Block = modalContent.slice(option1Start, option1End);
 
-      // Check that the duplicate outside button was removed
-      const outsideBlock = modalContent.slice(option2End);
-      expect(outsideBlock).not.toContain('Prefer to enter all exam details manually? Click here');
+      expect(option1Block).toContain('Prefer to enter all exam details manually? Click here');
+      expect(option1Block).toContain('handleOpenManualEntry()');
+      expect(option1Block).toContain('stopPropagation()');
     });
 
     it('uses the same OnboardingModal for both new user (Set Up My Exam) and existing user (Update My Exam)', () => {
