@@ -251,7 +251,13 @@ export async function processHallTicketExtraction(
   }
 
   const geminiKey = apiKey || process.env.GEMINI_API_KEY;
-  const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+  const primaryModel = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+  const candidateModels = Array.from(new Set([
+    primaryModel,
+    'gemini-3.5-flash-lite',
+    'gemini-3.1-flash-lite',
+    'gemini-3.8-flash',
+  ]));
 
   if (geminiKey) {
     try {
@@ -296,8 +302,6 @@ Return ONLY a valid JSON object matching this schema with NO markdown code block
   "is_hall_ticket": boolean
 }`;
 
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(geminiKey)}`;
-
       const requestBody = {
         contents: [
           {
@@ -324,9 +328,12 @@ Return ONLY a valid JSON object matching this schema with NO markdown code block
 
       let lastError: any = null;
       const MAX_RETRIES = 2;
-      const RETRYABLE_STATUSES = [429, 500, 502, 503, 504];
+      const RETRYABLE_STATUSES = [404, 429, 500, 502, 503, 504];
 
       for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        const activeModel = candidateModels[attempt % candidateModels.length];
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(activeModel)}:generateContent?key=${encodeURIComponent(geminiKey)}`;
+
         try {
           if (attempt > 0) {
             // Exponential backoff: 1000ms, 2000ms (10ms in test environment for fast test execution)
@@ -369,7 +376,7 @@ Return ONLY a valid JSON object matching this schema with NO markdown code block
             } else if (status === 401 || status === 403) {
               userMessage = 'AI authentication error. Server-side GEMINI_API_KEY is missing or invalid.';
             } else if (status === 404) {
-              userMessage = `Configured AI model (${model}) was not found.`;
+              userMessage = `Configured AI model (${activeModel}) was not found.`;
             } else if (status === 429) {
               userMessage = 'AI rate limit or quota exceeded. Please wait a moment or enter details manually.';
             } else if (status >= 500) {

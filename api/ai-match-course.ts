@@ -29,7 +29,13 @@ export async function processAiCourseMatch(
   }
 
   const geminiKey = process.env.GEMINI_API_KEY;
-  const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+  const primaryModel = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+  const candidateModels = Array.from(new Set([
+    primaryModel,
+    'gemini-3.5-flash-lite',
+    'gemini-3.1-flash-lite',
+    'gemini-3.8-flash',
+  ]));
 
   if (!geminiKey) {
     return {
@@ -59,34 +65,43 @@ Return ONLY a valid JSON object with NO markdown code blocks:
   "reason": string
 }`;
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(geminiKey)}`;
+    let response: any = null;
+    for (let i = 0; i < candidateModels.length; i++) {
+      const activeModel = candidateModels[i];
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(activeModel)}:generateContent?key=${encodeURIComponent(geminiKey)}`;
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
 
-    let response: any;
-    try {
-      response = await fetch(geminiUrl, {
-        method: 'POST',
-        signal: controller.signal,
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Goog-Api-Client': 'moocdeal/1.0',
-        },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: {
-            responseMimeType: 'application/json',
-            temperature: 0.1,
+      try {
+        response = await fetch(geminiUrl, {
+          method: 'POST',
+          signal: controller.signal,
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Client': 'moocdeal/1.0',
           },
-        }),
-      });
-    } finally {
-      clearTimeout(timeoutId);
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: {
+              responseMimeType: 'application/json',
+              temperature: 0.1,
+            },
+          }),
+        });
+      } catch {
+        // Continue to fallback model if timed out or failed
+      } finally {
+        clearTimeout(timeoutId);
+      }
+
+      if (response && response.ok) {
+        break;
+      }
     }
 
-    if (!response.ok) {
-      console.warn('Gemini course match status:', response.status);
+    if (!response || !response.ok) {
+      console.warn('Gemini course match status:', response?.status);
       return { matchedCourseId: null, confidence: 'NONE', reason: 'AI matching unavailable' };
     }
 
